@@ -31,8 +31,8 @@ export function usePromptUpsertMutation(workspaceId: number) {
       enabled: boolean;
     }) =>
       promptUpsert({
-        prompt_id: input.promptId,
-        workspace_id: workspaceId,
+        promptId: input.promptId,
+        workspaceId,
         name: input.name,
         content: input.content,
         enabled: input.enabled,

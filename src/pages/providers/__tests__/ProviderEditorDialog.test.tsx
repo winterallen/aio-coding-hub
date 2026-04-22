@@ -154,16 +154,18 @@ const render = renderDialog;
 
 describe("pages/providers/ProviderEditorDialog", () => {
   it("validates create form and saves provider", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 1,
-      cli_key: "claude",
-      name: "My Provider",
-      base_urls: ["https://example.com/v1"],
-      base_url_mode: "order",
-      enabled: true,
-      cost_multiplier: 1.0,
-      claude_models: {},
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 1,
+        cli_key: "claude",
+        name: "My Provider",
+        base_urls: ["https://example.com/v1"],
+        base_url_mode: "order",
+        enabled: true,
+        cost_multiplier: 1.0,
+        claude_models: {},
+      })
+    );
 
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
@@ -218,13 +220,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          cli_key: "claude",
+          cliKey: "claude",
           name: "My Provider",
-          base_urls: ["https://example.com/v1"],
-          base_url_mode: "order",
-          api_key: "sk-test",
+          baseUrls: ["https://example.com/v1"],
+          baseUrlMode: "order",
+          apiKey: "sk-test",
           enabled: true,
-          cost_multiplier: 1.0,
+          costMultiplier: 1.0,
         })
       )
     );
@@ -265,12 +267,14 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("passes stream idle timeout override when saving", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 3,
-      cli_key: "claude",
-      name: "Timeout Provider",
-      stream_idle_timeout_seconds: 120,
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 3,
+        cli_key: "claude",
+        name: "Timeout Provider",
+        stream_idle_timeout_seconds: 120,
+      })
+    );
 
     render(
       <ProviderEditorDialog
@@ -300,19 +304,21 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          stream_idle_timeout_seconds: 120,
+          streamIdleTimeoutSeconds: 120,
         })
       )
     );
   });
 
   it("clears existing stream idle timeout override when input is emptied", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 1,
-      cli_key: "claude",
-      name: "Existing",
-      stream_idle_timeout_seconds: null,
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 1,
+        cli_key: "claude",
+        name: "Existing",
+        stream_idle_timeout_seconds: null,
+      })
+    );
 
     render(
       <ProviderEditorDialog
@@ -333,8 +339,8 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          provider_id: 1,
-          stream_idle_timeout_seconds: 0,
+          providerId: 1,
+          streamIdleTimeoutSeconds: 0,
         })
       )
     );
@@ -371,17 +377,19 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("prefills create mode from initial values and saves as a new provider", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 2,
-      cli_key: "claude",
-      name: "Existing 副本",
-      base_urls: ["https://example.com/v1"],
-      base_url_mode: "order",
-      enabled: true,
-      cost_multiplier: 1.5,
-      claude_models: { main_model: "claude-copy" },
-      auth_mode: "api_key",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 2,
+        cli_key: "claude",
+        name: "Existing 副本",
+        base_urls: ["https://example.com/v1"],
+        base_url_mode: "order",
+        enabled: true,
+        cost_multiplier: 1.5,
+        claude_models: { main_model: "claude-copy" },
+        auth_mode: "api_key",
+      })
+    );
 
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
@@ -407,12 +415,12 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          cli_key: "claude",
+          cliKey: "claude",
           name: "Existing 副本",
-          api_key: "sk-copy",
-          base_urls: ["https://example.com/v1"],
-          base_url_mode: "order",
-          cost_multiplier: 1.5,
+          apiKey: "sk-copy",
+          baseUrls: ["https://example.com/v1"],
+          baseUrlMode: "order",
+          costMultiplier: 1.5,
           tags: ["prod"],
           note: "copied",
         })
@@ -422,25 +430,27 @@ describe("pages/providers/ProviderEditorDialog", () => {
     const allCalls = vi.mocked(providerUpsert).mock.calls;
     const lastCall = allCalls[allCalls.length - 1]?.[0];
     expect(lastCall).toBeDefined();
-    expect(lastCall).not.toHaveProperty("provider_id");
+    expect(lastCall).not.toHaveProperty("providerId");
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("claude"));
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
   it("inherits cost multiplier from selected codex source for cx2cc", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 12,
-      cli_key: "claude",
-      name: "Bridge Provider",
-      base_urls: [],
-      base_url_mode: "order",
-      enabled: true,
-      cost_multiplier: 1.8,
-      claude_models: {},
-      source_provider_id: 7,
-      bridge_type: "cx2cc",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 12,
+        cli_key: "claude",
+        name: "Bridge Provider",
+        base_urls: [],
+        base_url_mode: "order",
+        enabled: true,
+        cost_multiplier: 1.8,
+        claude_models: {},
+        source_provider_id: 7,
+        bridge_type: "cx2cc",
+      })
+    );
 
     render(
       <ProviderEditorDialog
@@ -484,27 +494,29 @@ describe("pages/providers/ProviderEditorDialog", () => {
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Bridge Provider",
-          cost_multiplier: 1.8,
-          source_provider_id: 7,
-          bridge_type: "cx2cc",
+          costMultiplier: 1.8,
+          sourceProviderId: 7,
+          bridgeType: "cx2cc",
         })
       )
     );
   });
 
   it("supports using the whole codex gateway as cx2cc source", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue({
-      id: 13,
-      cli_key: "claude",
-      name: "Bridge Gateway Provider",
-      base_urls: [],
-      base_url_mode: "order",
-      enabled: true,
-      cost_multiplier: 0,
-      claude_models: {},
-      source_provider_id: null,
-      bridge_type: "cx2cc",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValue(
+      makeProvider({
+        id: 13,
+        cli_key: "claude",
+        name: "Bridge Gateway Provider",
+        base_urls: [],
+        base_url_mode: "order",
+        enabled: true,
+        cost_multiplier: 0,
+        claude_models: {},
+        source_provider_id: null,
+        bridge_type: "cx2cc",
+      })
+    );
 
     render(
       <ProviderEditorDialog
@@ -540,9 +552,9 @@ describe("pages/providers/ProviderEditorDialog", () => {
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Bridge Gateway Provider",
-          cost_multiplier: 0,
-          source_provider_id: null,
-          bridge_type: "cx2cc",
+          costMultiplier: 0,
+          sourceProviderId: null,
+          bridgeType: "cx2cc",
         })
       )
     );
@@ -667,11 +679,11 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("supports edit mode, drives UI handlers, and blocks close while saving", async () => {
-    let resolveUpsert: (value: any) => void;
-    const upsertPromise = new Promise((resolve) => {
-      resolveUpsert = resolve as (value: any) => void;
+    let resolveUpsert!: (value: ProviderSummary) => void;
+    const upsertPromise = new Promise<ProviderSummary>((resolve) => {
+      resolveUpsert = resolve;
     });
-    vi.mocked(providerUpsert).mockReturnValue(upsertPromise as any);
+    vi.mocked(providerUpsert).mockReturnValue(upsertPromise);
 
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
@@ -733,9 +745,9 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          provider_id: 1,
-          cli_key: "claude",
-          base_url_mode: "order",
+          providerId: 1,
+          cliKey: "claude",
+          baseUrlMode: "order",
         })
       )
     );
@@ -762,7 +774,7 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("keeps unchanged API key out of edit save payload", async () => {
-    vi.mocked(providerUpsert).mockResolvedValue(makeProvider() as any);
+    vi.mocked(providerUpsert).mockResolvedValue(makeProvider());
 
     const provider = makeProvider({ api_key_configured: true });
     render(
@@ -781,8 +793,8 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          provider_id: 1,
-          api_key: null,
+          providerId: 1,
+          apiKey: null,
         })
       )
     );
@@ -953,11 +965,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("switches to OAuth mode and performs OAuth login in create mode", async () => {
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 99,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 99,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ provider_id: 99, provider_type: "google", expires_at: 1700000000 })
     );
@@ -1016,14 +1030,14 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          cli_key: "codex",
+          cliKey: "codex",
           name: "OAuth Provider",
-          auth_mode: "oauth",
-          limit_5h_usd: 5,
-          limit_daily_usd: 50,
-          limit_weekly_usd: 200,
-          limit_monthly_usd: 800,
-          limit_total_usd: 5000,
+          authMode: "oauth",
+          limit5hUsd: 5,
+          limitDailyUsd: 50,
+          limitWeeklyUsd: 200,
+          limitMonthlyUsd: 800,
+          limitTotalUsd: 5000,
         })
       )
     );
@@ -1033,11 +1047,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("keeps auto-saved provider when OAuth succeeds but status sync fails", async () => {
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 109,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 109,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({
         provider_id: 109,
@@ -1110,11 +1126,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("shows OAuth mode for Gemini and reuses the same create-time login flow", async () => {
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 199,
-      cli_key: "gemini",
-      name: "Gemini OAuth",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 199,
+        cli_key: "gemini",
+        name: "Gemini OAuth",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({
         provider_id: 199,
@@ -1221,11 +1239,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
 
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 99,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 99,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ success: false, provider_id: 99 })
     );
@@ -1264,11 +1284,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
 
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 102,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 102,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ success: false, provider_id: 102 })
     );
@@ -1314,11 +1336,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
 
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 103,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 103,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ success: false, provider_id: 103 })
     );
@@ -1526,11 +1550,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
 
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 101,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 101,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockRejectedValueOnce(new Error("OAuth boom"));
     vi.mocked(providerDelete).mockResolvedValueOnce(true as any);
 
@@ -1687,11 +1713,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("OAuth login with null fetch limits shows warning", async () => {
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 99,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 99,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ provider_id: 99, provider_type: "google", expires_at: 1700000000 })
     );
@@ -1728,11 +1756,13 @@ describe("pages/providers/ProviderEditorDialog", () => {
   });
 
   it("OAuth login with fetch limits error shows warning", async () => {
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 99,
-      cli_key: "codex",
-      name: "OAuth Provider",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 99,
+        cli_key: "codex",
+        name: "OAuth Provider",
+      })
+    );
     vi.mocked(providerOAuthStartFlow).mockResolvedValueOnce(
       makeOAuthStartFlowResult({ provider_id: 99, provider_type: "google", expires_at: 1700000000 })
     );
@@ -1949,17 +1979,19 @@ describe("pages/providers/ProviderEditorDialog", () => {
       })
     );
 
-    vi.mocked(providerUpsert).mockResolvedValueOnce({
-      id: 1,
-      cli_key: "claude",
-      name: "OAuth Provider",
-      base_urls: [],
-      base_url_mode: "order",
-      enabled: true,
-      cost_multiplier: 1.0,
-      claude_models: {},
-      auth_mode: "oauth",
-    } as any);
+    vi.mocked(providerUpsert).mockResolvedValueOnce(
+      makeProvider({
+        id: 1,
+        cli_key: "claude",
+        name: "OAuth Provider",
+        base_urls: [],
+        base_url_mode: "order",
+        enabled: true,
+        cost_multiplier: 1.0,
+        claude_models: {},
+        auth_mode: "oauth",
+      })
+    );
 
     const onSaved = vi.fn();
     const onOpenChange = vi.fn();
@@ -1987,9 +2019,9 @@ describe("pages/providers/ProviderEditorDialog", () => {
     await waitFor(() =>
       expect(vi.mocked(providerUpsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          auth_mode: "oauth",
-          api_key: null,
-          base_urls: [],
+          authMode: "oauth",
+          apiKey: null,
+          baseUrls: [],
         })
       )
     );

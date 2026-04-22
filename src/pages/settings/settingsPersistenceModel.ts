@@ -2,12 +2,14 @@ import type {
   AppSettings,
   HomeUsagePeriod,
   SettingsSetInput,
+  SettingsViewBackedInputKey,
 } from "../../services/settings/settings";
 import type { CliKey } from "../../services/providers/providers";
 import {
   DEFAULT_CLI_PRIORITY_ORDER,
   normalizeCliPriorityOrder,
 } from "../../services/cli/cliPriorityOrder";
+import { pickSettingsSetInputFieldsFromView } from "../../services/settings/settings";
 import { DEFAULT_HOME_USAGE_PERIOD } from "../../utils/homeUsagePeriod";
 
 export type PersistedSettings = {
@@ -66,6 +68,33 @@ export const DEFAULT_PERSISTED_SETTINGS: PersistedSettings = {
   circuit_breaker_failure_threshold: 5,
   circuit_breaker_open_duration_minutes: 30,
 };
+
+const PERSISTED_SETTINGS_INPUT_KEYS = [
+  "preferredPort",
+  "showHomeHeatmap",
+  "showHomeUsage",
+  "homeUsagePeriod",
+  "cliPriorityOrder",
+  "autoStart",
+  "startMinimized",
+  "trayEnabled",
+  "logRetentionDays",
+  "providerCooldownSeconds",
+  "providerBaseUrlPingCacheTtlSeconds",
+  "upstreamFirstByteTimeoutSeconds",
+  "upstreamStreamIdleTimeoutSeconds",
+  "upstreamRequestTimeoutNonStreamingSeconds",
+  "interceptAnthropicWarmupRequests",
+  "enableThinkingSignatureRectifier",
+  "enableResponseFixer",
+  "responseFixerFixEncoding",
+  "responseFixerFixSseFormat",
+  "responseFixerFixTruncatedJson",
+  "failoverMaxAttemptsPerProvider",
+  "failoverMaxProvidersToTry",
+  "circuitBreakerFailureThreshold",
+  "circuitBreakerOpenDurationMinutes",
+] as const satisfies readonly SettingsViewBackedInputKey[];
 
 export function persistedSettingValuesEqual(
   left: PersistedSettings[PersistKey],
@@ -184,33 +213,7 @@ export function buildPersistedSettingsSnapshot(
 export function buildPersistedSettingsMutationInput(
   desired: PersistedSettings
 ): SettingsSetInput {
-  return {
-    preferredPort: desired.preferred_port,
-    showHomeHeatmap: desired.show_home_heatmap,
-    showHomeUsage: desired.show_home_usage,
-    homeUsagePeriod: desired.home_usage_period,
-    cliPriorityOrder: desired.cli_priority_order,
-    autoStart: desired.auto_start,
-    startMinimized: desired.start_minimized,
-    trayEnabled: desired.tray_enabled,
-    logRetentionDays: desired.log_retention_days,
-    providerCooldownSeconds: desired.provider_cooldown_seconds,
-    providerBaseUrlPingCacheTtlSeconds: desired.provider_base_url_ping_cache_ttl_seconds,
-    upstreamFirstByteTimeoutSeconds: desired.upstream_first_byte_timeout_seconds,
-    upstreamStreamIdleTimeoutSeconds: desired.upstream_stream_idle_timeout_seconds,
-    upstreamRequestTimeoutNonStreamingSeconds:
-      desired.upstream_request_timeout_non_streaming_seconds,
-    interceptAnthropicWarmupRequests: desired.intercept_anthropic_warmup_requests,
-    enableThinkingSignatureRectifier: desired.enable_thinking_signature_rectifier,
-    enableResponseFixer: desired.enable_response_fixer,
-    responseFixerFixEncoding: desired.response_fixer_fix_encoding,
-    responseFixerFixSseFormat: desired.response_fixer_fix_sse_format,
-    responseFixerFixTruncatedJson: desired.response_fixer_fix_truncated_json,
-    failoverMaxAttemptsPerProvider: desired.failover_max_attempts_per_provider,
-    failoverMaxProvidersToTry: desired.failover_max_providers_to_try,
-    circuitBreakerFailureThreshold: desired.circuit_breaker_failure_threshold,
-    circuitBreakerOpenDurationMinutes: desired.circuit_breaker_open_duration_minutes,
-  };
+  return pickSettingsSetInputFieldsFromView(desired, PERSISTED_SETTINGS_INPUT_KEYS);
 }
 
 export function validatePersistedSettings(

@@ -110,34 +110,34 @@ export function buildProviderEditorUpsertInput(
         : parsed.data.cost_multiplier;
 
   const payload = {
-    ...(ctx.editingProviderId ? { provider_id: ctx.editingProviderId } : {}),
-    cli_key: ctx.cliKey,
+    ...(ctx.editingProviderId ? { providerId: ctx.editingProviderId } : {}),
+    cliKey: ctx.cliKey,
     name: parsed.data.name,
-    base_urls: finalBaseUrls,
-    base_url_mode: finalBaseUrlMode,
-    auth_mode: ctx.authMode === "cx2cc" ? "api_key" : ctx.authMode,
-    api_key:
+    baseUrls: finalBaseUrls,
+    baseUrlMode: finalBaseUrlMode,
+    authMode: ctx.authMode === "cx2cc" ? "api_key" : ctx.authMode,
+    apiKey:
       ctx.authMode === "oauth" || ctx.authMode === "cx2cc"
         ? null
         : parsed.data.api_key.trim() || null,
     enabled: parsed.data.enabled,
-    cost_multiplier: effectiveCostMultiplier,
-    limit_5h_usd: parsed.data.limit_5h_usd,
-    limit_daily_usd: parsed.data.limit_daily_usd,
-    daily_reset_mode: parsed.data.daily_reset_mode,
-    daily_reset_time: parsed.data.daily_reset_time,
-    limit_weekly_usd: parsed.data.limit_weekly_usd,
-    limit_monthly_usd: parsed.data.limit_monthly_usd,
-    limit_total_usd: parsed.data.limit_total_usd,
+    costMultiplier: effectiveCostMultiplier,
+    limit5hUsd: parsed.data.limit_5h_usd,
+    limitDailyUsd: parsed.data.limit_daily_usd,
+    dailyResetMode: parsed.data.daily_reset_mode,
+    dailyResetTime: parsed.data.daily_reset_time,
+    limitWeeklyUsd: parsed.data.limit_weekly_usd,
+    limitMonthlyUsd: parsed.data.limit_monthly_usd,
+    limitTotalUsd: parsed.data.limit_total_usd,
     tags: ctx.tags,
     note: parsed.data.note,
-    stream_idle_timeout_seconds: parsedTimeout,
+    streamIdleTimeoutSeconds: parsedTimeout,
     ...(ctx.cliKey === "claude" && ctx.authMode !== "oauth"
-      ? { claude_models: ctx.claudeModels }
+      ? { claudeModels: ctx.claudeModels }
       : {}),
-    source_provider_id:
+    sourceProviderId:
       ctx.authMode === "cx2cc" && !ctx.isCodexGatewaySource ? ctx.sourceProviderId : null,
-    bridge_type: ctx.authMode === "cx2cc" ? "cx2cc" : null,
+    bridgeType: ctx.authMode === "cx2cc" ? "cx2cc" : null,
   };
 
   return {

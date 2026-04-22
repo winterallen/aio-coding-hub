@@ -11,23 +11,23 @@ describe("services/providers via MSW bridge", () => {
 
   it("persists provider_upsert with nested input payload through tauri bridge", async () => {
     const saved = await providerUpsert({
-      cli_key: "claude",
+      cliKey: "claude",
       name: "Bridge Provider",
-      base_urls: ["https://api.example.com"],
-      base_url_mode: "order",
-      auth_mode: "api_key",
-      api_key: "sk-test",
+      baseUrls: ["https://api.example.com"],
+      baseUrlMode: "order",
+      authMode: "api_key",
+      apiKey: "sk-test",
       enabled: true,
-      cost_multiplier: 1.5,
+      costMultiplier: 1.5,
       priority: 8,
-      claude_models: null,
-      limit_5h_usd: 5,
-      limit_daily_usd: 10,
-      daily_reset_mode: "fixed",
-      daily_reset_time: "01:02:03",
-      limit_weekly_usd: 15,
-      limit_monthly_usd: 20,
-      limit_total_usd: 25,
+      claudeModels: null,
+      limit5hUsd: 5,
+      limitDailyUsd: 10,
+      dailyResetMode: "fixed",
+      dailyResetTime: "01:02:03",
+      limitWeeklyUsd: 15,
+      limitMonthlyUsd: 20,
+      limitTotalUsd: 25,
       tags: ["a", "b"],
       note: "hello",
     });
@@ -54,47 +54,47 @@ describe("services/providers via MSW bridge", () => {
 
   it("preserves stream idle timeout when omitted and clears it when null is submitted", async () => {
     const baseInput = {
-      cli_key: "claude" as const,
+      cliKey: "claude" as const,
       name: "Timeout Provider",
-      base_urls: ["https://api.example.com"],
-      base_url_mode: "order" as const,
-      auth_mode: "api_key" as const,
-      api_key: "sk-test",
+      baseUrls: ["https://api.example.com"],
+      baseUrlMode: "order" as const,
+      authMode: "api_key" as const,
+      apiKey: "sk-test",
       enabled: true,
-      cost_multiplier: 1,
+      costMultiplier: 1,
       priority: 1,
-      claude_models: null,
-      limit_5h_usd: null,
-      limit_daily_usd: null,
-      daily_reset_mode: "fixed" as const,
-      daily_reset_time: "00:00:00",
-      limit_weekly_usd: null,
-      limit_monthly_usd: null,
-      limit_total_usd: null,
+      claudeModels: null,
+      limit5hUsd: null,
+      limitDailyUsd: null,
+      dailyResetMode: "fixed" as const,
+      dailyResetTime: "00:00:00",
+      limitWeeklyUsd: null,
+      limitMonthlyUsd: null,
+      limitTotalUsd: null,
       tags: [],
       note: "",
     };
 
     const created = await providerUpsert({
       ...baseInput,
-      stream_idle_timeout_seconds: 120,
+      streamIdleTimeoutSeconds: 120,
     });
     expect(created?.stream_idle_timeout_seconds).toBe(120);
 
     const preserved = await providerUpsert({
       ...baseInput,
-      provider_id: created?.id,
+      providerId: created?.id,
       name: "Timeout Provider Updated",
-      api_key: undefined,
+      apiKey: undefined,
     });
     expect(preserved?.stream_idle_timeout_seconds).toBe(120);
 
     const cleared = await providerUpsert({
       ...baseInput,
-      provider_id: created?.id,
+      providerId: created?.id,
       name: "Timeout Provider Cleared",
-      api_key: undefined,
-      stream_idle_timeout_seconds: null,
+      apiKey: undefined,
+      streamIdleTimeoutSeconds: null,
     });
     expect(cleared?.stream_idle_timeout_seconds).toBeNull();
   });

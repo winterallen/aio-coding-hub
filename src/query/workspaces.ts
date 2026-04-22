@@ -43,9 +43,9 @@ export function useWorkspaceCreateMutation() {
   return useMutation({
     mutationFn: (input: { cliKey: CliKey; name: string; cloneFromActive?: boolean }) =>
       workspaceCreate({
-        cli_key: input.cliKey,
+        cliKey: input.cliKey,
         name: input.name,
-        clone_from_active: input.cloneFromActive,
+        cloneFromActive: input.cloneFromActive,
       }),
     onSuccess: (created, input) => {
       if (!created) return;
@@ -73,7 +73,7 @@ export function useWorkspaceRenameMutation() {
 
   return useMutation({
     mutationFn: (input: { cliKey: CliKey; workspaceId: number; name: string }) =>
-      workspaceRename({ workspace_id: input.workspaceId, name: input.name }),
+      workspaceRename({ workspaceId: input.workspaceId, name: input.name }),
     onSuccess: (updated, input) => {
       if (!updated) return;
       queryClient.setQueryData<WorkspacesListResult | null>(

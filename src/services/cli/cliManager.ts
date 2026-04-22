@@ -27,6 +27,10 @@ export type CodexConfigTomlValidationError = GeneratedCodexConfigTomlValidationE
 export type CodexConfigTomlValidationResult = GeneratedCodexConfigTomlValidationResult;
 export type GeminiConfigState = GeneratedGeminiConfigState;
 export type GeminiConfigPatch = Partial<GeneratedGeminiConfigPatch>;
+export type ClaudeEnvSetInput = {
+  mcpTimeoutMs: number | null;
+  disableErrorReporting: boolean;
+};
 
 function toCodexConfigPatch(patch: CodexConfigPatch) {
   return {
@@ -221,22 +225,18 @@ export async function cliManagerGeminiConfigSet(patch: GeminiConfigPatch) {
   });
 }
 
-export async function cliManagerClaudeEnvSet(input: {
-  mcp_timeout_ms: number | null;
-  disable_error_reporting: boolean;
-}) {
+export async function cliManagerClaudeEnvSet(input: ClaudeEnvSetInput) {
   return invokeGeneratedIpc<ClaudeEnvState>({
     title: "保存 Claude 环境变量失败",
     cmd: "cli_manager_claude_env_set",
     args: {
-      mcpTimeoutMs: input.mcp_timeout_ms,
-      disableErrorReporting: input.disable_error_reporting,
+      mcpTimeoutMs: input.mcpTimeoutMs,
+      disableErrorReporting: input.disableErrorReporting,
     },
     invoke: () =>
-      commands.cliManagerClaudeEnvSet(
-        input.mcp_timeout_ms,
-        input.disable_error_reporting
-      ) as Promise<GeneratedCommandResult<ClaudeEnvState>>,
+      commands.cliManagerClaudeEnvSet(input.mcpTimeoutMs, input.disableErrorReporting) as Promise<
+        GeneratedCommandResult<ClaudeEnvState>
+      >,
   });
 }
 

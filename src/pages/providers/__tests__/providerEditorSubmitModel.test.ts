@@ -67,9 +67,9 @@ describe("pages/providers/providerEditorSubmitModel", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.value.payload.base_urls).toEqual([]);
-    expect(result.value.payload.api_key).toBeNull();
-    expect(result.value.payload.auth_mode).toBe("oauth");
+    expect(result.value.payload.baseUrls).toEqual([]);
+    expect(result.value.payload.apiKey).toBeNull();
+    expect(result.value.payload.authMode).toBe("oauth");
   });
 
   it("forces cx2cc gateway sources to use zero cost and no source provider id", () => {
@@ -88,9 +88,9 @@ describe("pages/providers/providerEditorSubmitModel", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.value.payload.cost_multiplier).toBe(0);
-    expect(result.value.payload.bridge_type).toBe("cx2cc");
-    expect(result.value.payload.source_provider_id).toBeNull();
-    expect(result.value.payload.auth_mode).toBe("api_key");
+    expect(result.value.payload.costMultiplier).toBe(0);
+    expect(result.value.payload.bridgeType).toBe("cx2cc");
+    expect(result.value.payload.sourceProviderId).toBeNull();
+    expect(result.value.payload.authMode).toBe("api_key");
   });
 });

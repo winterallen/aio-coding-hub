@@ -121,8 +121,8 @@ export function useSkillRepoUpsertMutation() {
       enabled: boolean;
     }) =>
       skillRepoUpsert({
-        repo_id: input.repoId,
-        git_url: input.gitUrl,
+        repoId: input.repoId,
+        gitUrl: input.gitUrl,
         branch: input.branch,
         enabled: input.enabled,
       }),
@@ -165,10 +165,10 @@ export function useSkillInstallMutation(workspaceId: number) {
       enabled: boolean;
     }) =>
       skillInstall({
-        workspace_id: workspaceId,
-        git_url: input.gitUrl,
+        workspaceId,
+        gitUrl: input.gitUrl,
         branch: input.branch,
-        source_subdir: input.sourceSubdir,
+        sourceSubdir: input.sourceSubdir,
         enabled: input.enabled,
       }),
     onSuccess: (next) => {
@@ -193,10 +193,10 @@ export function useSkillInstallToLocalMutation(workspaceId: number) {
   return useMutation({
     mutationFn: async (input: { gitUrl: string; branch: string; sourceSubdir: string }) =>
       skillInstallToLocal({
-        workspace_id: workspaceId,
-        git_url: input.gitUrl,
+        workspaceId,
+        gitUrl: input.gitUrl,
         branch: input.branch,
-        source_subdir: input.sourceSubdir,
+        sourceSubdir: input.sourceSubdir,
       }),
     onSuccess: (next) => {
       if (!next) return;
@@ -218,8 +218,8 @@ export function useSkillSetEnabledMutation(workspaceId: number) {
   return useMutation({
     mutationFn: async (input: { skillId: number; enabled: boolean }) =>
       skillSetEnabled({
-        workspace_id: workspaceId,
-        skill_id: input.skillId,
+        workspaceId,
+        skillId: input.skillId,
         enabled: input.enabled,
       }),
     onSuccess: (next) => {
@@ -253,7 +253,7 @@ export function useSkillImportLocalMutation(workspaceId: number) {
 
   return useMutation({
     mutationFn: async (dirName: string) =>
-      skillImportLocal({ workspace_id: workspaceId, dir_name: dirName }),
+      skillImportLocal({ workspaceId, dirName }),
     onSuccess: (next) => {
       if (!next) return;
       queryClient.setQueryData<InstalledSkillSummary[]>(
@@ -275,7 +275,7 @@ export function useSkillReturnToLocalMutation(workspaceId: number) {
 
   return useMutation({
     mutationFn: async (skillId: number) =>
-      skillReturnToLocal({ workspace_id: workspaceId, skill_id: skillId }),
+      skillReturnToLocal({ workspaceId, skillId }),
     onSuccess: (ok, skillId) => {
       if (!ok) return;
       queryClient.setQueryData<InstalledSkillSummary[]>(
@@ -293,7 +293,7 @@ export function useSkillLocalDeleteMutation(workspaceId: number) {
 
   return useMutation({
     mutationFn: async (dirName: string) =>
-      skillLocalDelete({ workspace_id: workspaceId, dir_name: dirName }),
+      skillLocalDelete({ workspaceId, dirName }),
     onSuccess: (ok, dirName) => {
       if (!ok) return;
       queryClient.setQueryData<LocalSkillSummary[]>(skillsKeys.localList(workspaceId), (cur) =>
@@ -308,7 +308,7 @@ export function useSkillsImportLocalBatchMutation(workspaceId: number) {
 
   return useMutation({
     mutationFn: async (dirNames: string[]) =>
-      skillsImportLocalBatch({ workspace_id: workspaceId, dir_names: dirNames }),
+      skillsImportLocalBatch({ workspaceId, dirNames }),
     onSuccess: (report) => {
       if (!report) return;
       const imported = report.imported ?? [];
@@ -346,7 +346,7 @@ export function useSkillUpdateMutation(workspaceId: number) {
 
   return useMutation({
     mutationFn: async (skillId: number) =>
-      skillUpdate({ workspace_id: workspaceId, skill_id: skillId }),
+      skillUpdate({ workspaceId, skillId }),
     onSuccess: (next) => {
       if (!next) return;
       queryClient.setQueryData<InstalledSkillSummary[]>(

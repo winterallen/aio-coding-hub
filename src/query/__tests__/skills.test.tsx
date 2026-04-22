@@ -70,6 +70,40 @@ vi.mock("../../services/workspace/skills", async () => {
   };
 });
 
+function createInstalledSkillSummary(
+  overrides: Partial<InstalledSkillSummary> = {}
+): InstalledSkillSummary {
+  return {
+    id: 1,
+    skill_key: "skill-a",
+    name: "Skill A",
+    description: "desc",
+    source_git_url: "https://example.com/repo.git",
+    source_branch: "main",
+    source_subdir: "skills/a",
+    installed_commit: null,
+    enabled: true,
+    created_at: 0,
+    updated_at: 0,
+    ...overrides,
+  };
+}
+
+function createLocalSkillSummary(
+  overrides: Partial<LocalSkillSummary> = {}
+): LocalSkillSummary {
+  return {
+    dir_name: "skill-a",
+    path: "/tmp/skill-a",
+    name: "Skill A",
+    description: "desc",
+    source_git_url: null,
+    source_branch: null,
+    source_subdir: null,
+    ...overrides,
+  };
+}
+
 describe("query/skills", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,7 +181,7 @@ describe("query/skills", () => {
   it("useSkillsInstalledListQuery drops stale data when workspaceId becomes null", async () => {
     setTauriRuntime();
     const rows: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 1,
         skill_key: "alpha",
         name: "Alpha",
@@ -155,10 +189,9 @@ describe("query/skills", () => {
         source_git_url: "https://example.com/acme/repo.git",
         source_branch: "main",
         source_subdir: "skills/alpha",
-        enabled: true,
         created_at: 1,
         updated_at: 1,
-      },
+      }),
     ];
     vi.mocked(skillsInstalledList).mockResolvedValue(rows);
 
@@ -216,7 +249,7 @@ describe("query/skills", () => {
   it("useSkillsLocalListQuery drops stale data when workspaceId becomes null", async () => {
     setTauriRuntime();
     const rows: LocalSkillSummary[] = [
-      {
+      createLocalSkillSummary({
         dir_name: "alpha",
         path: "/tmp/alpha",
         name: "Alpha",
@@ -224,7 +257,7 @@ describe("query/skills", () => {
         source_git_url: "https://example.com/acme/repo.git",
         source_branch: "main",
         source_subdir: "skills/alpha",
-      },
+      }),
     ];
     vi.mocked(skillsLocalList).mockResolvedValue(rows);
 
@@ -531,18 +564,13 @@ describe("query/skills", () => {
   it("useSkillInstallMutation inserts into installed list and invalidates discoverAvailable(false)", async () => {
     setTauriRuntime();
 
-    const installed: InstalledSkillSummary = {
+    const installed = createInstalledSkillSummary({
       id: 10,
       skill_key: "s1",
       name: "S1",
       description: "d",
-      source_git_url: "https://example.com/repo.git",
-      source_branch: "main",
       source_subdir: "skills/s1",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
 
     vi.mocked(skillInstall).mockResolvedValue(installed);
 
@@ -568,18 +596,13 @@ describe("query/skills", () => {
   it("useSkillInstallMutation updates an existing installed row", async () => {
     setTauriRuntime();
 
-    const prev: InstalledSkillSummary = {
+    const prev = createInstalledSkillSummary({
       id: 10,
       skill_key: "s1",
       name: "S1",
       description: "d",
-      source_git_url: "https://example.com/repo.git",
-      source_branch: "main",
       source_subdir: "skills/s1",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
     const updated = { ...prev, enabled: false };
     vi.mocked(skillInstall).mockResolvedValue(updated);
 
@@ -623,7 +646,7 @@ describe("query/skills", () => {
   it("useSkillInstallToLocalMutation inserts or updates local list rows", async () => {
     setTauriRuntime();
 
-    const next: LocalSkillSummary = {
+    const next = createLocalSkillSummary({
       dir_name: "skill-a",
       path: "/tmp/skill-a",
       name: "Skill A",
@@ -631,7 +654,7 @@ describe("query/skills", () => {
       source_git_url: "https://example.com/repo.git",
       source_branch: "main",
       source_subdir: "skills/a",
-    };
+    });
     vi.mocked(skillInstallToLocal).mockResolvedValue(next);
 
     const client = createTestQueryClient();
@@ -668,18 +691,13 @@ describe("query/skills", () => {
     setTauriRuntime();
     vi.mocked(skillSetEnabled).mockResolvedValue(null as never);
 
-    const prev: InstalledSkillSummary = {
+    const prev = createInstalledSkillSummary({
       id: 10,
       skill_key: "s1",
       name: "S1",
       description: "d",
-      source_git_url: "https://example.com/repo.git",
-      source_branch: "main",
       source_subdir: "skills/s1",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
 
     const client = createTestQueryClient();
     client.setQueryData(skillsKeys.installedList(1), [prev]);
@@ -696,18 +714,13 @@ describe("query/skills", () => {
   it("useSkillSetEnabledMutation updates installed list row", async () => {
     setTauriRuntime();
 
-    const prev: InstalledSkillSummary = {
+    const prev = createInstalledSkillSummary({
       id: 10,
       skill_key: "s1",
       name: "S1",
       description: "d",
-      source_git_url: "https://example.com/repo.git",
-      source_branch: "main",
       source_subdir: "skills/s1",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
     const updated = { ...prev, enabled: false };
     vi.mocked(skillSetEnabled).mockResolvedValue(updated);
 
@@ -728,18 +741,13 @@ describe("query/skills", () => {
     vi.mocked(skillUninstall).mockResolvedValue(false);
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 10,
         skill_key: "s1",
         name: "S1",
         description: "d",
-        source_git_url: "https://example.com/repo.git",
-        source_branch: "main",
         source_subdir: "skills/s1",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -761,18 +769,13 @@ describe("query/skills", () => {
     vi.mocked(skillUninstall).mockResolvedValue(true);
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 10,
         skill_key: "s1",
         name: "S1",
         description: "d",
-        source_git_url: "https://example.com/repo.git",
-        source_branch: "main",
         source_subdir: "skills/s1",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -794,18 +797,13 @@ describe("query/skills", () => {
     vi.mocked(skillReturnToLocal).mockResolvedValue(false);
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 10,
         skill_key: "s1",
         name: "S1",
         description: "d",
-        source_git_url: "https://example.com/repo.git",
-        source_branch: "main",
         source_subdir: "skills/s1",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -827,18 +825,13 @@ describe("query/skills", () => {
     vi.mocked(skillReturnToLocal).mockResolvedValue(true);
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 10,
         skill_key: "s1",
         name: "S1",
         description: "d",
-        source_git_url: "https://example.com/repo.git",
-        source_branch: "main",
         source_subdir: "skills/s1",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -861,12 +854,12 @@ describe("query/skills", () => {
     vi.mocked(skillLocalDelete).mockResolvedValue(false);
 
     const prev: LocalSkillSummary[] = [
-      {
+      createLocalSkillSummary({
         dir_name: "local-skill",
         name: "Local Skill",
         description: "d",
         path: "/tmp/local-skill",
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -886,18 +879,18 @@ describe("query/skills", () => {
     vi.mocked(skillLocalDelete).mockResolvedValue(true);
 
     const prev: LocalSkillSummary[] = [
-      {
+      createLocalSkillSummary({
         dir_name: "local-skill",
         name: "Local Skill",
         description: "d",
         path: "/tmp/local-skill",
-      },
-      {
+      }),
+      createLocalSkillSummary({
         dir_name: "other-skill",
         name: "Other Skill",
         description: "d2",
         path: "/tmp/other-skill",
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -917,7 +910,7 @@ describe("query/skills", () => {
     vi.mocked(skillImportLocal).mockResolvedValue(null as never);
 
     const locals: LocalSkillSummary[] = [
-      { dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" },
+      createLocalSkillSummary({ dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" }),
     ];
     vi.mocked(skillsLocalList).mockResolvedValue(locals);
 
@@ -937,7 +930,7 @@ describe("query/skills", () => {
   it("useSkillImportLocalMutation inserts into installed list and invalidates localList", async () => {
     setTauriRuntime();
 
-    const next: InstalledSkillSummary = {
+    const next = createInstalledSkillSummary({
       id: 11,
       skill_key: "s2",
       name: "S2",
@@ -945,14 +938,11 @@ describe("query/skills", () => {
       source_git_url: "local",
       source_branch: "local",
       source_subdir: "skills/s2",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
     vi.mocked(skillImportLocal).mockResolvedValue(next);
 
     const locals: LocalSkillSummary[] = [
-      { dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" },
+      createLocalSkillSummary({ dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" }),
     ];
     vi.mocked(skillsLocalList).mockResolvedValue(locals);
 
@@ -974,7 +964,7 @@ describe("query/skills", () => {
   it("useSkillImportLocalMutation updates an existing installed row", async () => {
     setTauriRuntime();
 
-    const prev: InstalledSkillSummary = {
+    const prev = createInstalledSkillSummary({
       id: 11,
       skill_key: "s2",
       name: "S2",
@@ -982,15 +972,12 @@ describe("query/skills", () => {
       source_git_url: "local",
       source_branch: "local",
       source_subdir: "skills/s2",
-      enabled: true,
-      created_at: 0,
-      updated_at: 0,
-    };
+    });
     const updated = { ...prev, enabled: false };
     vi.mocked(skillImportLocal).mockResolvedValue(updated);
 
     const locals: LocalSkillSummary[] = [
-      { dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" },
+      createLocalSkillSummary({ dir_name: "s2", path: "/tmp/s2", name: "S2", description: "d2" }),
     ];
     vi.mocked(skillsLocalList).mockResolvedValue(locals);
 
@@ -1012,7 +999,7 @@ describe("query/skills", () => {
     vi.mocked(skillsImportLocalBatch).mockResolvedValue(null as never);
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 11,
         skill_key: "s2",
         name: "S2",
@@ -1020,10 +1007,7 @@ describe("query/skills", () => {
         source_git_url: "local",
         source_branch: "local",
         source_subdir: "skills/s2",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();
@@ -1045,7 +1029,7 @@ describe("query/skills", () => {
 
     vi.mocked(skillsImportLocalBatch).mockResolvedValue({
       imported: [
-        {
+        createInstalledSkillSummary({
           id: 12,
           skill_key: "s3",
           name: "S3",
@@ -1053,17 +1037,14 @@ describe("query/skills", () => {
           source_git_url: "local",
           source_branch: "local",
           source_subdir: "skills/s3",
-          enabled: true,
-          created_at: 0,
-          updated_at: 0,
-        },
+        }),
       ],
       skipped: [],
       failed: [],
     });
 
     const prev: InstalledSkillSummary[] = [
-      {
+      createInstalledSkillSummary({
         id: 11,
         skill_key: "s2",
         name: "S2",
@@ -1071,10 +1052,7 @@ describe("query/skills", () => {
         source_git_url: "local",
         source_branch: "local",
         source_subdir: "skills/s2",
-        enabled: true,
-        created_at: 0,
-        updated_at: 0,
-      },
+      }),
     ];
 
     const client = createTestQueryClient();

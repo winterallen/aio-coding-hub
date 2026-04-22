@@ -116,7 +116,7 @@ describe("services/cli/cliManager", () => {
     await cliManagerCodexConfigTomlSet('model = "gpt-5"');
     expect(commands.cliManagerCodexConfigTomlSet).toHaveBeenCalledWith('model = "gpt-5"');
 
-    await cliManagerClaudeEnvSet({ mcp_timeout_ms: 30_000, disable_error_reporting: true });
+    await cliManagerClaudeEnvSet({ mcpTimeoutMs: 30_000, disableErrorReporting: true });
     expect(commands.cliManagerClaudeEnvSet).toHaveBeenCalledWith(30_000, true);
 
     await cliManagerClaudeSettingsGet();

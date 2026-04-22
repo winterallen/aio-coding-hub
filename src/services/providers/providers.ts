@@ -12,31 +12,16 @@ import {
   type ProviderSummary as GeneratedProviderSummary,
   type ProviderUpsertInput as GeneratedProviderUpsertInput,
 } from "../../generated/bindings";
-import { invokeGeneratedIpc, type GeneratedCommandResult } from "../generatedIpc";
-
-type Override<TValue, TOverrides> = Omit<TValue, keyof TOverrides> & TOverrides;
-
-type NullableGeneratedKeys<TValue extends object> = {
-  [TKey in keyof TValue]-?: null extends TValue[TKey] ? TKey : never;
-}[keyof TValue];
-
-type NonNullableGeneratedKeys<TValue extends object> = Exclude<
-  keyof TValue,
-  NullableGeneratedKeys<TValue>
->;
-
-type OptionalNullableGeneratedFields<TValue extends object> = Pick<
-  TValue,
-  NonNullableGeneratedKeys<TValue>
-> &
-  Partial<Pick<TValue, NullableGeneratedKeys<TValue>>>;
-
-type RemapGeneratedKeys<
-  TValue extends object,
-  TMap extends Partial<Record<keyof TValue, PropertyKey>>,
-> = {
-  [TKey in keyof TValue as TKey extends keyof TMap ? TMap[TKey] & PropertyKey : TKey]: TValue[TKey];
-};
+import {
+  invokeGeneratedIpc,
+  mapGeneratedCommandResponse,
+  type GeneratedCommandResult,
+} from "../generatedIpc";
+import {
+  narrowGeneratedStringUnion,
+  type NullableGeneratedKeys,
+  type Override,
+} from "../generatedTypeUtils";
 
 export type {
   ProviderOAuthDisconnectResult,
@@ -53,103 +38,104 @@ export type DailyResetMode = GeneratedDailyResetMode;
 export type ProviderAuthMode = GeneratedProviderAuthMode;
 export type ProviderBaseUrlMode = GeneratedProviderBaseUrlMode;
 
+const CLI_KEY_VALUES = ["claude", "codex", "gemini"] as const satisfies readonly CliKey[];
+const PROVIDER_AUTH_MODE_VALUES = ["api_key", "oauth"] as const satisfies readonly ProviderAuthMode[];
+
 export type ProviderSummary = Override<
   GeneratedProviderSummary,
   {
     cli_key: CliKey;
     auth_mode: ProviderAuthMode;
-    api_key_configured?: GeneratedProviderSummary["api_key_configured"];
   }
 >;
+
+type ProviderUpsertOptionalKeys =
+  | NullableGeneratedKeys<GeneratedProviderUpsertInput>
+  | "streamIdleTimeoutSeconds";
+
+export type ProviderUpsertInput = Omit<
+  GeneratedProviderUpsertInput,
+  ProviderUpsertOptionalKeys | "cliKey"
+> &
+  {
+    cliKey: CliKey;
+  } & Partial<
+    Pick<GeneratedProviderUpsertInput, ProviderUpsertOptionalKeys>
+  >;
+
+type ProviderUpsertTransportInput = Omit<
+  GeneratedProviderUpsertInput,
+  "streamIdleTimeoutSeconds"
+> & {
+  streamIdleTimeoutSeconds?: GeneratedProviderUpsertInput["streamIdleTimeoutSeconds"];
+};
+
+function toCliKey(value: string, label: string): CliKey {
+  return narrowGeneratedStringUnion(value, CLI_KEY_VALUES, label);
+}
+
+function toProviderAuthMode(value: string, label: string): ProviderAuthMode {
+  return narrowGeneratedStringUnion(value, PROVIDER_AUTH_MODE_VALUES, label);
+}
+
+function toProviderSummary(value: GeneratedProviderSummary): ProviderSummary {
+  return {
+    ...value,
+    cli_key: toCliKey(value.cli_key, "providers.cli_key"),
+    auth_mode: toProviderAuthMode(value.auth_mode, "providers.auth_mode"),
+  };
+}
+
+function toProviderUpsertPayload(input: ProviderUpsertInput): ProviderUpsertTransportInput {
+  const payloadBase = {
+    providerId: input.providerId ?? null,
+    cliKey: input.cliKey,
+    name: input.name,
+    baseUrls: input.baseUrls,
+    baseUrlMode: input.baseUrlMode,
+    authMode: input.authMode ?? null,
+    apiKey: input.apiKey ?? null,
+    enabled: input.enabled,
+    costMultiplier: input.costMultiplier,
+    priority: input.priority ?? null,
+    claudeModels: input.claudeModels ?? null,
+    limit5hUsd: input.limit5hUsd ?? null,
+    limitDailyUsd: input.limitDailyUsd ?? null,
+    dailyResetMode: input.dailyResetMode ?? null,
+    dailyResetTime: input.dailyResetTime ?? null,
+    limitWeeklyUsd: input.limitWeeklyUsd ?? null,
+    limitMonthlyUsd: input.limitMonthlyUsd ?? null,
+    limitTotalUsd: input.limitTotalUsd ?? null,
+    tags: input.tags ?? null,
+    note: input.note ?? null,
+    sourceProviderId: input.sourceProviderId ?? null,
+    bridgeType: input.bridgeType ?? null,
+  } satisfies Omit<GeneratedProviderUpsertInput, "streamIdleTimeoutSeconds">;
+
+  if (Object.prototype.hasOwnProperty.call(input, "streamIdleTimeoutSeconds")) {
+    return {
+      ...payloadBase,
+      streamIdleTimeoutSeconds: input.streamIdleTimeoutSeconds ?? 0,
+    } satisfies ProviderUpsertTransportInput;
+  }
+
+  return payloadBase;
+}
 
 export async function providersList(cliKey: CliKey) {
   return invokeGeneratedIpc<ProviderSummary[]>({
     title: "读取供应商列表失败",
     cmd: "providers_list",
     args: { cliKey },
-    invoke: () =>
-      commands.providersList(cliKey) as Promise<GeneratedCommandResult<ProviderSummary[]>>,
+    invoke: async () =>
+      mapGeneratedCommandResponse(await commands.providersList(cliKey), (rows) =>
+        rows.map(toProviderSummary)
+      ),
   });
 }
 
-const providerUpsertFieldMap = {
-  providerId: "provider_id",
-  cliKey: "cli_key",
-  name: "name",
-  baseUrls: "base_urls",
-  baseUrlMode: "base_url_mode",
-  authMode: "auth_mode",
-  apiKey: "api_key",
-  enabled: "enabled",
-  costMultiplier: "cost_multiplier",
-  priority: "priority",
-  claudeModels: "claude_models",
-  limit5hUsd: "limit_5h_usd",
-  limitDailyUsd: "limit_daily_usd",
-  dailyResetMode: "daily_reset_mode",
-  dailyResetTime: "daily_reset_time",
-  limitWeeklyUsd: "limit_weekly_usd",
-  limitMonthlyUsd: "limit_monthly_usd",
-  limitTotalUsd: "limit_total_usd",
-  tags: "tags",
-  note: "note",
-  sourceProviderId: "source_provider_id",
-  bridgeType: "bridge_type",
-  streamIdleTimeoutSeconds: "stream_idle_timeout_seconds",
-} as const satisfies Record<keyof GeneratedProviderUpsertInput, string>;
-
-type ProviderUpsertTransportInput =
-  OptionalNullableGeneratedFields<GeneratedProviderUpsertInput>;
-
-export type ProviderUpsertInput = Override<
-  RemapGeneratedKeys<ProviderUpsertTransportInput, typeof providerUpsertFieldMap>,
-  {
-    cli_key: CliKey;
-    auth_mode?: ProviderAuthMode | null;
-    base_url_mode: ProviderBaseUrlMode;
-    claude_models?: ClaudeModels | null;
-    limit_5h_usd: number | null;
-    limit_daily_usd: number | null;
-    daily_reset_mode: DailyResetMode;
-    daily_reset_time: string;
-    limit_weekly_usd: number | null;
-    limit_monthly_usd: number | null;
-    limit_total_usd: number | null;
-  }
->;
-
 export async function providerUpsert(input: ProviderUpsertInput) {
-  const streamIdleTimeoutSeconds = Object.prototype.hasOwnProperty.call(
-    input,
-    "stream_idle_timeout_seconds"
-  )
-    ? (input.stream_idle_timeout_seconds ?? 0)
-    : undefined;
-  const payload = {
-    providerId: input.provider_id ?? null,
-    cliKey: input.cli_key,
-    name: input.name,
-    baseUrls: input.base_urls,
-    baseUrlMode: input.base_url_mode,
-    authMode: input.auth_mode ?? null,
-    apiKey: input.api_key ?? null,
-    enabled: input.enabled,
-    costMultiplier: input.cost_multiplier,
-    priority: input.priority ?? null,
-    claudeModels: input.claude_models ?? null,
-    limit5hUsd: input.limit_5h_usd,
-    limitDailyUsd: input.limit_daily_usd,
-    dailyResetMode: input.daily_reset_mode,
-    dailyResetTime: input.daily_reset_time,
-    limitWeeklyUsd: input.limit_weekly_usd,
-    limitMonthlyUsd: input.limit_monthly_usd,
-    limitTotalUsd: input.limit_total_usd,
-    tags: input.tags ?? null,
-    note: input.note ?? null,
-    sourceProviderId: input.source_provider_id ?? null,
-    bridgeType: input.bridge_type ?? null,
-    streamIdleTimeoutSeconds: streamIdleTimeoutSeconds as number | null,
-  };
+  const payload = toProviderUpsertPayload(input);
   const logPayload = {
     ...payload,
     apiKey: payload.apiKey == null ? payload.apiKey : "[REDACTED]",
@@ -159,8 +145,11 @@ export async function providerUpsert(input: ProviderUpsertInput) {
     title: "保存供应商失败",
     cmd: "provider_upsert",
     args: { input: logPayload },
-    invoke: () =>
-      commands.providerUpsert(payload) as Promise<GeneratedCommandResult<ProviderSummary>>,
+    invoke: async () =>
+      mapGeneratedCommandResponse(
+        await commands.providerUpsert(payload as GeneratedProviderUpsertInput),
+        toProviderSummary
+      ),
   });
 }
 
@@ -181,10 +170,11 @@ export async function providerSetEnabled(
     title: "更新供应商启用状态失败",
     cmd: "provider_set_enabled",
     args: { providerId, enabled },
-    invoke: () =>
-      commands.providerSetEnabled(providerId, enabled) as Promise<
-        GeneratedCommandResult<ProviderSummary>
-      >,
+    invoke: async () =>
+      mapGeneratedCommandResponse(
+        await commands.providerSetEnabled(providerId, enabled),
+        toProviderSummary
+      ),
   });
 }
 
@@ -206,10 +196,10 @@ export async function providersReorder(
     title: "调整供应商顺序失败",
     cmd: "providers_reorder",
     args: { cliKey, orderedProviderIds },
-    invoke: () =>
-      commands.providersReorder(cliKey, orderedProviderIds) as Promise<
-        GeneratedCommandResult<ProviderSummary[]>
-      >,
+    invoke: async () =>
+      mapGeneratedCommandResponse(await commands.providersReorder(cliKey, orderedProviderIds), (rows) =>
+        rows.map(toProviderSummary)
+      ),
   });
 }
 
@@ -218,8 +208,8 @@ export async function providerDuplicate(providerId: number): Promise<ProviderSum
     title: "复制供应商失败",
     cmd: "provider_duplicate",
     args: { providerId },
-    invoke: () =>
-      commands.providerDuplicate(providerId) as Promise<GeneratedCommandResult<ProviderSummary>>,
+    invoke: async () =>
+      mapGeneratedCommandResponse(await commands.providerDuplicate(providerId), toProviderSummary),
   });
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   baseUrlPingMs,
+  type ProviderSummary,
   providerClaudeTerminalLaunchCommand,
   providerCopyApiKeyToClipboard,
   providerDelete,
@@ -52,6 +53,41 @@ vi.mock("../../consoleLog", async () => {
   };
 });
 
+function createProviderSummary(overrides: Partial<ProviderSummary> = {}): ProviderSummary {
+  return {
+    id: 1,
+    cli_key: "claude",
+    name: "P1",
+    base_urls: ["https://example.com"],
+    base_url_mode: "order",
+    claude_models: {},
+    enabled: true,
+    priority: 0,
+    cost_multiplier: 1,
+    limit_5h_usd: null,
+    limit_daily_usd: null,
+    daily_reset_mode: "fixed",
+    daily_reset_time: "00:00:00",
+    limit_weekly_usd: null,
+    limit_monthly_usd: null,
+    limit_total_usd: null,
+    tags: [],
+    note: "",
+    created_at: 0,
+    updated_at: 0,
+    auth_mode: "api_key",
+    oauth_provider_type: null,
+    oauth_email: null,
+    oauth_expires_at: null,
+    oauth_last_error: null,
+    source_provider_id: null,
+    bridge_type: null,
+    stream_idle_timeout_seconds: null,
+    api_key_configured: false,
+    ...overrides,
+  };
+}
+
 describe("services/providers/providers", () => {
   it("rethrows and logs when invoke fails", async () => {
     vi.mocked(commands.providersList).mockRejectedValueOnce(new Error("providers boom"));
@@ -76,27 +112,27 @@ describe("services/providers/providers", () => {
   it("builds provider_upsert args as before", async () => {
     vi.mocked(commands.providerUpsert).mockResolvedValueOnce({
       status: "ok",
-      data: { id: 1, cli_key: "claude" } as any,
+      data: createProviderSummary(),
     });
 
     await providerUpsert({
-      provider_id: null,
-      cli_key: "claude",
+      providerId: null,
+      cliKey: "claude",
       name: "P1",
-      base_urls: ["https://example.com"],
-      base_url_mode: "order",
-      api_key: null,
+      baseUrls: ["https://example.com"],
+      baseUrlMode: "order",
+      apiKey: null,
       enabled: true,
-      cost_multiplier: 1,
+      costMultiplier: 1,
       priority: null,
-      claude_models: null,
-      limit_5h_usd: null,
-      limit_daily_usd: null,
-      daily_reset_mode: "fixed",
-      daily_reset_time: "00:00:00",
-      limit_weekly_usd: null,
-      limit_monthly_usd: null,
-      limit_total_usd: null,
+      claudeModels: null,
+      limit5hUsd: null,
+      limitDailyUsd: null,
+      dailyResetMode: "fixed",
+      dailyResetTime: "00:00:00",
+      limitWeeklyUsd: null,
+      limitMonthlyUsd: null,
+      limitTotalUsd: null,
     });
 
     expect(commands.providerUpsert).toHaveBeenCalledWith(
@@ -116,24 +152,24 @@ describe("services/providers/providers", () => {
 
     await expect(
       providerUpsert({
-        provider_id: null,
-        cli_key: "claude",
+        providerId: null,
+        cliKey: "claude",
         name: "P1",
-        base_urls: ["https://example.com"],
-        base_url_mode: "order",
-        auth_mode: "api_key",
-        api_key: "sk-test-secret",
+        baseUrls: ["https://example.com"],
+        baseUrlMode: "order",
+        authMode: "api_key",
+        apiKey: "sk-test-secret",
         enabled: true,
-        cost_multiplier: 1,
+        costMultiplier: 1,
         priority: null,
-        claude_models: null,
-        limit_5h_usd: null,
-        limit_daily_usd: null,
-        daily_reset_mode: "fixed",
-        daily_reset_time: "00:00:00",
-        limit_weekly_usd: null,
-        limit_monthly_usd: null,
-        limit_total_usd: null,
+        claudeModels: null,
+        limit5hUsd: null,
+        limitDailyUsd: null,
+        dailyResetMode: "fixed",
+        dailyResetTime: "00:00:00",
+        limitWeeklyUsd: null,
+        limitMonthlyUsd: null,
+        limitTotalUsd: null,
       })
     ).rejects.toThrow("save failed");
 
@@ -157,7 +193,7 @@ describe("services/providers/providers", () => {
     vi.mocked(commands.baseUrlPingMs).mockResolvedValueOnce({ status: "ok", data: 120 as any });
     vi.mocked(commands.providerSetEnabled).mockResolvedValueOnce({
       status: "ok",
-      data: { id: 1, cli_key: "claude" } as any,
+      data: createProviderSummary(),
     });
     vi.mocked(commands.providerDelete).mockResolvedValueOnce({
       status: "ok",
@@ -190,7 +226,7 @@ describe("services/providers/providers", () => {
   it("provider duplicate and clipboard copy both use generated ipc", async () => {
     vi.mocked(commands.providerDuplicate).mockResolvedValueOnce({
       status: "ok",
-      data: { id: 42 } as any,
+      data: createProviderSummary({ id: 42 }),
     });
     vi.mocked(commands.providerCopyApiKeyToClipboard).mockResolvedValueOnce({
       status: "ok",
@@ -200,7 +236,7 @@ describe("services/providers/providers", () => {
     const duplicated = await providerDuplicate(42);
     const copied = await providerCopyApiKeyToClipboard(42);
 
-    expect(duplicated).toEqual({ id: 42 });
+    expect(duplicated).toEqual(createProviderSummary({ id: 42 }));
     expect(copied).toBe(true);
     expect(commands.providerDuplicate).toHaveBeenCalledWith(42);
     expect(commands.providerCopyApiKeyToClipboard).toHaveBeenCalledWith(42);

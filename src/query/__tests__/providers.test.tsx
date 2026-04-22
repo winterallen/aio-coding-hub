@@ -68,6 +68,7 @@ function makeProvider(
     source_provider_id: partial.source_provider_id ?? null,
     bridge_type: partial.bridge_type ?? null,
     stream_idle_timeout_seconds: partial.stream_idle_timeout_seconds ?? null,
+    api_key_configured: partial.api_key_configured ?? false,
   };
 }
 
@@ -162,20 +163,20 @@ describe("query/providers", () => {
     await act(async () => {
       await result.current.mutateAsync({
         input: {
-          provider_id: 1,
-          cli_key: "claude",
+          providerId: 1,
+          cliKey: "claude",
           name: "Updated",
-          base_urls: [],
-          base_url_mode: "order",
+          baseUrls: [],
+          baseUrlMode: "order",
           enabled: true,
-          cost_multiplier: 1,
-          limit_5h_usd: null,
-          limit_daily_usd: null,
-          daily_reset_mode: "fixed",
-          daily_reset_time: "00:00:00",
-          limit_weekly_usd: null,
-          limit_monthly_usd: null,
-          limit_total_usd: null,
+          costMultiplier: 1,
+          limit5hUsd: null,
+          limitDailyUsd: null,
+          dailyResetMode: "fixed",
+          dailyResetTime: "00:00:00",
+          limitWeeklyUsd: null,
+          limitMonthlyUsd: null,
+          limitTotalUsd: null,
         },
       });
     });

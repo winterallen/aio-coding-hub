@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { commands } from "../../../generated/bindings";
 import { logToConsole } from "../../consoleLog";
-import { promptDelete, promptSetEnabled, promptUpsert, promptsList } from "../prompts";
+import {
+  promptDelete,
+  promptSetEnabled,
+  promptUpsert,
+  promptsList,
+  type PromptSummary,
+} from "../prompts";
 
 vi.mock("../../../generated/bindings", async () => {
   const actual = await vi.importActual<typeof import("../../../generated/bindings")>(
@@ -28,6 +34,20 @@ vi.mock("../../consoleLog", async () => {
 });
 
 describe("services/workspace/prompts", () => {
+  function createPromptSummary(overrides: Partial<PromptSummary> = {}): PromptSummary {
+    return {
+      id: 1,
+      workspace_id: 1,
+      cli_key: "claude",
+      name: "Prompt A",
+      content: "hello",
+      enabled: true,
+      created_at: 0,
+      updated_at: 0,
+      ...overrides,
+    };
+  }
+
   it("rethrows invoke errors and logs", async () => {
     vi.mocked(commands.promptsList).mockRejectedValueOnce(new Error("prompts boom"));
 
@@ -43,22 +63,25 @@ describe("services/workspace/prompts", () => {
   });
 
   it("treats null invoke result as error with runtime", async () => {
-    vi.mocked(commands.promptsList).mockResolvedValueOnce(null as any);
+    vi.mocked(commands.promptsList).mockResolvedValueOnce(null as never);
 
     await expect(promptsList(1)).rejects.toThrow("IPC_NULL_RESULT: prompts_list");
   });
 
   it("keeps argument mapping unchanged", async () => {
-    vi.mocked(commands.promptUpsert).mockResolvedValue({ status: "ok", data: { id: 1 } as any });
+    vi.mocked(commands.promptUpsert).mockResolvedValue({
+      status: "ok",
+      data: createPromptSummary(),
+    });
     vi.mocked(commands.promptSetEnabled).mockResolvedValue({
       status: "ok",
-      data: { id: 1 } as any,
+      data: createPromptSummary({ enabled: false }),
     });
     vi.mocked(commands.promptDelete).mockResolvedValue({ status: "ok", data: true });
 
     await promptUpsert({
-      prompt_id: null,
-      workspace_id: 1,
+      promptId: null,
+      workspaceId: 1,
       name: "P1",
       content: "hello",
       enabled: true,

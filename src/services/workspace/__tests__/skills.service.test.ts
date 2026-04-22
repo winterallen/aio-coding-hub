@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { commands } from "../../../generated/bindings";
 import { logToConsole } from "../../consoleLog";
 import {
+  type InstalledSkillSummary,
+  type LocalSkillSummary,
+  type SkillImportLocalBatchReport,
+  type SkillRepoSummary,
   skillImportLocal,
   skillLocalDelete,
   skillReturnToLocal,
@@ -53,6 +57,65 @@ vi.mock("../../consoleLog", async () => {
 });
 
 describe("services/workspace/skills", () => {
+  function createSkillRepoSummary(
+    overrides: Partial<SkillRepoSummary> = {}
+  ): SkillRepoSummary {
+    return {
+      id: 1,
+      git_url: "https://example.com/repo.git",
+      branch: "main",
+      enabled: true,
+      created_at: 0,
+      updated_at: 0,
+      ...overrides,
+    };
+  }
+
+  function createInstalledSkillSummary(
+    overrides: Partial<InstalledSkillSummary> = {}
+  ): InstalledSkillSummary {
+    return {
+      id: 1,
+      skill_key: "skill-a",
+      name: "Skill A",
+      description: "desc",
+      source_git_url: "https://example.com/repo.git",
+      source_branch: "main",
+      source_subdir: "skills/a",
+      installed_commit: null,
+      enabled: true,
+      created_at: 0,
+      updated_at: 0,
+      ...overrides,
+    };
+  }
+
+  function createLocalSkillSummary(
+    overrides: Partial<LocalSkillSummary> = {}
+  ): LocalSkillSummary {
+    return {
+      dir_name: "skill-a",
+      path: "/tmp/skill-a",
+      name: "Skill A",
+      description: "desc",
+      source_git_url: "https://example.com/repo.git",
+      source_branch: "main",
+      source_subdir: "skills/a",
+      ...overrides,
+    };
+  }
+
+  function createSkillImportLocalBatchReport(
+    overrides: Partial<SkillImportLocalBatchReport> = {}
+  ): SkillImportLocalBatchReport {
+    return {
+      imported: [],
+      skipped: [],
+      failed: [],
+      ...overrides,
+    };
+  }
+
   it("rethrows invoke errors and logs", async () => {
     vi.mocked(commands.skillReposList).mockRejectedValueOnce(new Error("skills boom"));
 
@@ -68,47 +131,53 @@ describe("services/workspace/skills", () => {
   });
 
   it("treats null invoke result as error with runtime", async () => {
-    vi.mocked(commands.skillReposList).mockResolvedValueOnce(null as any);
+    vi.mocked(commands.skillReposList).mockResolvedValueOnce(null as never);
 
     await expect(skillReposList()).rejects.toThrow("IPC_NULL_RESULT: skill_repos_list");
   });
 
   it("keeps argument mapping unchanged", async () => {
-    vi.mocked(commands.skillRepoUpsert).mockResolvedValue({ status: "ok", data: { id: 1 } as any });
+    vi.mocked(commands.skillRepoUpsert).mockResolvedValue({
+      status: "ok",
+      data: createSkillRepoSummary(),
+    });
     vi.mocked(commands.skillRepoDelete).mockResolvedValue({ status: "ok", data: true });
     vi.mocked(commands.skillsDiscoverAvailable).mockResolvedValue({
       status: "ok",
-      data: [] as any,
+      data: [],
     });
-    vi.mocked(commands.skillInstall).mockResolvedValue({ status: "ok", data: { id: 1 } as any });
+    vi.mocked(commands.skillInstall).mockResolvedValue({
+      status: "ok",
+      data: createInstalledSkillSummary(),
+    });
     vi.mocked(commands.skillSetEnabled).mockResolvedValue({
       status: "ok",
-      data: { id: 1 } as any,
+      data: createInstalledSkillSummary({ enabled: false }),
     });
     vi.mocked(commands.skillInstallToLocal).mockResolvedValue({
       status: "ok",
-      data: { dir_name: "skill-a" } as any,
+      data: createLocalSkillSummary(),
     });
     vi.mocked(commands.skillUninstall).mockResolvedValue({ status: "ok", data: true });
     vi.mocked(commands.skillReturnToLocal).mockResolvedValue({ status: "ok", data: true });
-    vi.mocked(commands.skillsLocalList).mockResolvedValue({ status: "ok", data: [] as any });
+    vi.mocked(commands.skillsLocalList).mockResolvedValue({ status: "ok", data: [] });
     vi.mocked(commands.skillLocalDelete).mockResolvedValue({ status: "ok", data: true });
     vi.mocked(commands.skillImportLocal).mockResolvedValue({
       status: "ok",
-      data: { id: 1 } as any,
+      data: createInstalledSkillSummary(),
     });
     vi.mocked(commands.skillsImportLocalBatch).mockResolvedValue({
       status: "ok",
-      data: { imported: [], skipped: [], failed: [] } as any,
+      data: createSkillImportLocalBatchReport(),
     });
     vi.mocked(commands.skillsPathsGet).mockResolvedValue({
       status: "ok",
-      data: { ssot_dir: "", repos_dir: "", cli_dir: "" } as any,
+      data: { ssot_dir: "", repos_dir: "", cli_dir: "" },
     });
 
     await skillRepoUpsert({
-      repo_id: null,
-      git_url: "https://example.com/repo.git",
+      repoId: null,
+      gitUrl: "https://example.com/repo.git",
       branch: "main",
       enabled: true,
     });
@@ -126,10 +195,10 @@ describe("services/workspace/skills", () => {
     expect(commands.skillsDiscoverAvailable).toHaveBeenCalledWith(true);
 
     await skillInstall({
-      workspace_id: 1,
-      git_url: "https://example.com/repo.git",
+      workspaceId: 1,
+      gitUrl: "https://example.com/repo.git",
       branch: "main",
-      source_subdir: "skills/a",
+      sourceSubdir: "skills/a",
       enabled: true,
     });
     expect(commands.skillInstall).toHaveBeenCalledWith(
@@ -140,14 +209,14 @@ describe("services/workspace/skills", () => {
       true
     );
 
-    await skillSetEnabled({ workspace_id: 1, skill_id: 2, enabled: false });
+    await skillSetEnabled({ workspaceId: 1, skillId: 2, enabled: false });
     expect(commands.skillSetEnabled).toHaveBeenCalledWith(1, 2, false);
 
     await skillInstallToLocal({
-      workspace_id: 1,
-      git_url: "https://example.com/repo.git",
+      workspaceId: 1,
+      gitUrl: "https://example.com/repo.git",
       branch: "main",
-      source_subdir: "skills/a",
+      sourceSubdir: "skills/a",
     });
     expect(commands.skillInstallToLocal).toHaveBeenCalledWith(
       1,
@@ -159,19 +228,19 @@ describe("services/workspace/skills", () => {
     await skillUninstall(2);
     expect(commands.skillUninstall).toHaveBeenCalledWith(2);
 
-    await skillReturnToLocal({ workspace_id: 1, skill_id: 2 });
+    await skillReturnToLocal({ workspaceId: 1, skillId: 2 });
     expect(commands.skillReturnToLocal).toHaveBeenCalledWith(1, 2);
 
     await skillsLocalList(1);
     expect(commands.skillsLocalList).toHaveBeenCalledWith(1);
 
-    await skillLocalDelete({ workspace_id: 1, dir_name: "my-skill" });
+    await skillLocalDelete({ workspaceId: 1, dirName: "my-skill" });
     expect(commands.skillLocalDelete).toHaveBeenCalledWith(1, "my-skill");
 
-    await skillImportLocal({ workspace_id: 1, dir_name: "my-skill" });
+    await skillImportLocal({ workspaceId: 1, dirName: "my-skill" });
     expect(commands.skillImportLocal).toHaveBeenCalledWith(1, "my-skill");
 
-    await skillsImportLocalBatch({ workspace_id: 1, dir_names: ["a", "b"] });
+    await skillsImportLocalBatch({ workspaceId: 1, dirNames: ["a", "b"] });
     expect(commands.skillsImportLocalBatch).toHaveBeenCalledWith(1, ["a", "b"]);
 
     await skillsPathsGet("claude");
