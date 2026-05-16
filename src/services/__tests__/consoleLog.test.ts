@@ -69,4 +69,83 @@ describe("services/consoleLog", () => {
       })
     );
   });
+
+  it("filters logs below min level and sanitizes circular/deep metadata branches", async () => {
+    const { clearConsoleLogs, logToConsole, setConsoleLogMinLevel, useConsoleLogs } =
+      await importFreshConsoleLog();
+
+    clearConsoleLogs();
+    setConsoleLogMinLevel("error");
+
+    const { result } = renderHook(() => useConsoleLogs());
+    const details: Record<string, unknown> & { self?: unknown } = {
+      traceId: " trace-1 ",
+      cli: " codex ",
+      errorCode: " GW_TEST ",
+      providers: Array.from({ length: 14 }, (_, index) => `P${index}`),
+      attempts: [null, { providerName: "P-extra" }, { provider_name: "" }],
+      token: "SECRET",
+      deep: { a: { b: { c: { d: { e: { f: { g: "too deep" } } } } } } },
+    };
+    details.self = details;
+
+    act(() => {
+      logToConsole("info", "ignored", details);
+    });
+    await Promise.resolve();
+    expect(result.current).toEqual([]);
+
+    act(() => {
+      logToConsole("error", "stored", details);
+    });
+
+    await waitFor(() => {
+      expect(result.current.length).toBe(1);
+    });
+
+    const entry = result.current[0];
+    expect(entry.details).toEqual(
+      expect.objectContaining({
+        token: "[REDACTED]",
+        self: "[Circular]",
+      })
+    );
+    expect(entry.meta).toEqual(
+      expect.objectContaining({
+        trace_id: "trace-1",
+        cli_key: "codex",
+        error_code: "GW_TEST",
+        providers: expect.arrayContaining(["P-extra", "P0", "P10"]),
+      })
+    );
+    expect(entry.meta?.providers).toHaveLength(12);
+    expect(JSON.stringify(entry.details)).toContain("[Truncated]");
+  });
+
+  it("uses requestAnimationFrame when scheduling log updates", async () => {
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameMock = vi.fn((callback: FrameRequestCallback) => {
+      callback(1);
+      return 1;
+    });
+    window.requestAnimationFrame = requestAnimationFrameMock;
+
+    try {
+      const { clearConsoleLogs, logToConsole, setConsoleLogMinLevel, useConsoleLogs } =
+        await importFreshConsoleLog();
+
+      clearConsoleLogs();
+      setConsoleLogMinLevel("debug");
+      const { result } = renderHook(() => useConsoleLogs());
+
+      act(() => {
+        logToConsole("warn", "raf");
+      });
+
+      await waitFor(() => expect(result.current).toHaveLength(1));
+      expect(requestAnimationFrameMock).toHaveBeenCalled();
+    } finally {
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  });
 });

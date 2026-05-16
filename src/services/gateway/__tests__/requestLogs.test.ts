@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { commands } from "../../../generated/bindings";
 import { logToConsole } from "../../consoleLog";
-import { createRequestLogDetail } from "../requestLogFixtures";
+import { createRequestLogDetail, createRequestLogSummary } from "../requestLogFixtures";
 import {
   type RequestAttemptLog,
   requestAttemptLogsByTraceId,
@@ -123,5 +123,62 @@ describe("services/gateway/requestLogs", () => {
     expect(commands.requestLogGet).toHaveBeenCalledWith(1);
     expect(commands.requestLogGetByTraceId).toHaveBeenCalledWith("t1");
     expect(commands.requestAttemptLogsByTraceId).toHaveBeenCalledWith("t1", 99);
+  });
+
+  it("maps non-empty command responses and default limit fallbacks", async () => {
+    vi.mocked(commands.requestLogsList).mockResolvedValueOnce({
+      status: "ok",
+      data: [createRequestLogSummary({ cli_key: "codex" }) as any],
+    });
+    vi.mocked(commands.requestLogsListAll).mockResolvedValueOnce({
+      status: "ok",
+      data: [createRequestLogSummary({ cli_key: "gemini" }) as any],
+    });
+    vi.mocked(commands.requestLogsListAfterId).mockResolvedValueOnce({
+      status: "ok",
+      data: [createRequestLogSummary({ cli_key: "claude" }) as any],
+    });
+    vi.mocked(commands.requestLogsListAfterIdAll).mockResolvedValueOnce({
+      status: "ok",
+      data: [createRequestLogSummary({ cli_key: "codex" }) as any],
+    });
+    vi.mocked(commands.requestLogGet).mockResolvedValueOnce({
+      status: "ok",
+      data: createRequestLogDetail({ cli_key: "gemini" }) as any,
+    });
+    vi.mocked(commands.requestLogGetByTraceId).mockResolvedValueOnce({
+      status: "ok",
+      data: createRequestLogDetail({ cli_key: "codex" }) as any,
+    });
+    vi.mocked(commands.requestAttemptLogsByTraceId).mockResolvedValueOnce({
+      status: "ok",
+      data: [makeRequestAttemptLog({ cli_key: "gemini" }) as any],
+    });
+
+    await expect(requestLogsList("codex")).resolves.toEqual([
+      expect.objectContaining({ cli_key: "codex" }),
+    ]);
+    await expect(requestLogsListAll()).resolves.toEqual([
+      expect.objectContaining({ cli_key: "gemini" }),
+    ]);
+    await expect(requestLogsListAfterId("claude", 10)).resolves.toEqual([
+      expect.objectContaining({ cli_key: "claude" }),
+    ]);
+    await expect(requestLogsListAfterIdAll(10)).resolves.toEqual([
+      expect.objectContaining({ cli_key: "codex" }),
+    ]);
+    await expect(requestLogGet(2)).resolves.toEqual(expect.objectContaining({ cli_key: "gemini" }));
+    await expect(requestLogGetByTraceId("trace-2")).resolves.toEqual(
+      expect.objectContaining({ cli_key: "codex" })
+    );
+    await expect(requestAttemptLogsByTraceId("trace-2")).resolves.toEqual([
+      expect.objectContaining({ cli_key: "gemini" }),
+    ]);
+
+    expect(commands.requestLogsList).toHaveBeenCalledWith("codex", null);
+    expect(commands.requestLogsListAll).toHaveBeenCalledWith(null);
+    expect(commands.requestLogsListAfterId).toHaveBeenCalledWith("claude", 10, null);
+    expect(commands.requestLogsListAfterIdAll).toHaveBeenCalledWith(10, null);
+    expect(commands.requestAttemptLogsByTraceId).toHaveBeenCalledWith("trace-2", null);
   });
 });
