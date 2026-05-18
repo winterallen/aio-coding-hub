@@ -131,6 +131,7 @@ describe("pages/settings/settingsPersistenceModel", () => {
       upstreamRequestTimeoutNonStreamingSeconds: 0,
       interceptAnthropicWarmupRequests: false,
       enableThinkingSignatureRectifier: true,
+      enableDebugLog: false,
       enableResponseFixer: true,
       responseFixerFixEncoding: true,
       responseFixerFixSseFormat: true,

@@ -286,6 +286,13 @@ pub(super) async fn handle_thinking_rectifiers_400(
                 should_record_circuit_failure = false;
                 category = ErrorCategory::NonRetryableClientError;
                 decision = FailoverDecision::Abort;
+            } else if upstream_client_error_rules::should_abort_unmatched_client_error(
+                status,
+                matched_rule_id,
+            ) {
+                should_record_circuit_failure = false;
+                category = ErrorCategory::NonRetryableClientError;
+                decision = FailoverDecision::Abort;
             }
         }
 
@@ -490,4 +497,53 @@ pub(super) async fn handle_thinking_rectifiers_400(
     }
 
     unreachable!("expected thinking rectifier 400 path")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{upstream_client_error_rules, ErrorCategory, FailoverDecision};
+
+    fn thinking_rectifier_fallback_classification(
+        status: reqwest::StatusCode,
+        matched_rule_id: Option<&'static str>,
+    ) -> (ErrorCategory, FailoverDecision, bool) {
+        let mut category = ErrorCategory::ProviderError;
+        let mut decision = FailoverDecision::RetrySameProvider;
+        let mut should_record_circuit_failure = true;
+
+        if matched_rule_id.is_some() {
+            should_record_circuit_failure = false;
+            category = ErrorCategory::NonRetryableClientError;
+            decision = FailoverDecision::Abort;
+        } else if upstream_client_error_rules::should_abort_unmatched_client_error(
+            status,
+            matched_rule_id,
+        ) {
+            should_record_circuit_failure = false;
+            category = ErrorCategory::NonRetryableClientError;
+            decision = FailoverDecision::Abort;
+        }
+
+        (category, decision, should_record_circuit_failure)
+    }
+
+    #[test]
+    fn unmatched_400_does_not_record_circuit_failure() {
+        let (category, decision, should_record) =
+            thinking_rectifier_fallback_classification(reqwest::StatusCode::BAD_REQUEST, None);
+
+        assert!(matches!(category, ErrorCategory::NonRetryableClientError));
+        assert!(matches!(decision, FailoverDecision::Abort));
+        assert!(!should_record);
+    }
+
+    #[test]
+    fn provider_side_402_still_records_circuit_failure() {
+        let (category, decision, should_record) =
+            thinking_rectifier_fallback_classification(reqwest::StatusCode::PAYMENT_REQUIRED, None);
+
+        assert!(matches!(category, ErrorCategory::ProviderError));
+        assert!(matches!(decision, FailoverDecision::RetrySameProvider));
+        assert!(should_record);
+    }
 }

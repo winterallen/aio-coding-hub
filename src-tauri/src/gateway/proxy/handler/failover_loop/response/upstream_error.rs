@@ -55,21 +55,6 @@ fn upstream_error_decision(
     base_decision
 }
 
-/// Abort unmatched catch-all 4xx to prevent pointless retries and circuit breaker pollution.
-///
-/// Catch-all 4xx (anything outside 401–404, 408, 429) that was not matched by the body-scanning
-/// non-retryable rules is almost certainly a deterministic client error.  Retrying the identical
-/// request will produce the identical result, wasting attempts and inflating the provider failure
-/// count until the circuit breaker opens — a single bad request can trip a 30-minute outage.
-fn should_abort_unmatched_client_error(
-    status: reqwest::StatusCode,
-    matched_rule_id: Option<&'static str>,
-) -> bool {
-    status.is_client_error()
-        && !matches!(status.as_u16(), 401 | 402 | 403 | 404 | 408 | 429)
-        && matched_rule_id.is_none()
-}
-
 fn reqwest_error_decision(
     is_count_tokens: bool,
     is_connect: bool,
@@ -417,7 +402,9 @@ pub(super) async fn handle_non_success_response(
         }
     }
 
-    if !is_count_tokens && should_abort_unmatched_client_error(status, matched_rule_id) {
+    if !is_count_tokens
+        && upstream_client_error_rules::should_abort_unmatched_client_error(status, matched_rule_id)
+    {
         category = ErrorCategory::NonRetryableClientError;
         decision = FailoverDecision::Abort;
         // Extract body preview for diagnostic logging when aborting unmatched 4xx.
@@ -778,8 +765,8 @@ pub(super) async fn handle_reqwest_error(
 mod tests {
     use super::{
         matches_codex_previous_response_id_error, remove_codex_previous_response_id,
-        reqwest_error_decision, should_abort_unmatched_client_error,
-        should_scan_codex_previous_response_id_error, upstream_error_decision, FailoverDecision,
+        reqwest_error_decision, should_scan_codex_previous_response_id_error,
+        upstream_error_decision, FailoverDecision,
     };
     use axum::body::Bytes;
 
@@ -897,69 +884,5 @@ mod tests {
     fn reqwest_error_decision_retries_non_connect_errors_before_limit() {
         let decision = reqwest_error_decision(false, false, 1, 5);
         assert!(matches!(decision, FailoverDecision::RetrySameProvider));
-    }
-
-    // --- should_abort_unmatched_client_error ---
-
-    #[test]
-    fn unmatched_400_aborts_for_any_cli() {
-        assert!(should_abort_unmatched_client_error(
-            reqwest::StatusCode::BAD_REQUEST,
-            None,
-        ));
-    }
-
-    #[test]
-    fn unmatched_422_aborts() {
-        assert!(should_abort_unmatched_client_error(
-            reqwest::StatusCode::UNPROCESSABLE_ENTITY,
-            None,
-        ));
-    }
-
-    #[test]
-    fn unmatched_409_aborts() {
-        assert!(should_abort_unmatched_client_error(
-            reqwest::StatusCode::CONFLICT,
-            None,
-        ));
-    }
-
-    #[test]
-    fn matched_rule_does_not_abort() {
-        assert!(!should_abort_unmatched_client_error(
-            reqwest::StatusCode::BAD_REQUEST,
-            Some("prompt_limit"),
-        ));
-    }
-
-    #[test]
-    fn excluded_4xx_codes_do_not_abort() {
-        for status in [
-            reqwest::StatusCode::UNAUTHORIZED,      // 401
-            reqwest::StatusCode::PAYMENT_REQUIRED,  // 402
-            reqwest::StatusCode::FORBIDDEN,         // 403
-            reqwest::StatusCode::NOT_FOUND,         // 404
-            reqwest::StatusCode::REQUEST_TIMEOUT,   // 408
-            reqwest::StatusCode::TOO_MANY_REQUESTS, // 429
-        ] {
-            assert!(
-                !should_abort_unmatched_client_error(status, None),
-                "status {} should not abort",
-                status.as_u16()
-            );
-        }
-    }
-
-    #[test]
-    fn non_4xx_does_not_abort() {
-        assert!(!should_abort_unmatched_client_error(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            None,
-        ));
-        assert!(!should_abort_unmatched_client_error(
-            reqwest::StatusCode::OK,
-            None,
-        ));
     }
 }

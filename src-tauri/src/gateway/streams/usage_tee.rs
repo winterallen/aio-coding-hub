@@ -348,9 +348,8 @@ where
     let (tx, rx) =
         tokio::sync::mpsc::channel::<Result<Bytes, reqwest::Error>>(SSE_RELAY_BUFFER_CAPACITY);
 
-    let mut tee =
-        UsageSseTeeStream::new(upstream, ctx, idle_timeout, initial_first_byte_ms)
-            .with_defer_terminal_error();
+    let mut tee = UsageSseTeeStream::new(upstream, ctx, idle_timeout, initial_first_byte_ms)
+        .with_defer_terminal_error();
 
     tokio::spawn(async move {
         let mut forwarded_chunks: i64 = 0;
@@ -732,8 +731,8 @@ where
 mod tests {
     use super::{
         is_codex_body_buffer_drop_successish, is_codex_client_abort_successish,
-        is_codex_drop_successish, is_codex_responses_path,
-        is_codex_stream_tail_error_successish, is_codex_stream_terminal_error_successish,
+        is_codex_drop_successish, is_codex_responses_path, is_codex_stream_tail_error_successish,
+        is_codex_stream_terminal_error_successish,
     };
 
     #[test]

@@ -19,7 +19,7 @@ function extractRustStringConst(source: string, constName: string) {
 }
 
 function extractTypeBody(source: string, typeName: string) {
-  const match = source.match(new RegExp(`export type ${typeName} = \\{([\\s\\S]*?)\\};`));
+  const match = source.match(new RegExp(`export type ${typeName} = \\{([^}]*)\\}`));
   expect(match).toBeTruthy();
   return match![1];
 }
@@ -101,10 +101,10 @@ describe("generated/bindings.ts contract", () => {
 
   it("pins acronym casing for usage bridge filter DTO fields", () => {
     expect(extractTypeBody(bindingsSource, "UsageQueryParams")).toContain(
-      "excludeCx2CcGatewayBridge: boolean | null;"
+      "excludeCx2CcGatewayBridge: boolean | null"
     );
     expect(extractTypeBody(bindingsSource, "UsageDayDetailParams")).toContain(
-      "excludeCx2CcGatewayBridge: boolean | null;"
+      "excludeCx2CcGatewayBridge: boolean | null"
     );
     expect(bindingsSource).not.toContain("excludeCx2ccGatewayBridge: boolean | null;");
   });
