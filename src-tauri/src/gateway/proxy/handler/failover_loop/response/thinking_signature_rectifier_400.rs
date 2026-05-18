@@ -282,14 +282,12 @@ pub(super) async fn handle_thinking_rectifiers_400(
                 status,
                 body_for_scan.as_ref(),
             );
-            if matched_rule_id.is_some() {
-                should_record_circuit_failure = false;
-                category = ErrorCategory::NonRetryableClientError;
-                decision = FailoverDecision::Abort;
-            } else if upstream_client_error_rules::should_abort_unmatched_client_error(
-                status,
-                matched_rule_id,
-            ) {
+            if matched_rule_id.is_some()
+                || upstream_client_error_rules::should_abort_unmatched_client_error(
+                    status,
+                    matched_rule_id,
+                )
+            {
                 should_record_circuit_failure = false;
                 category = ErrorCategory::NonRetryableClientError;
                 decision = FailoverDecision::Abort;
@@ -511,14 +509,12 @@ mod tests {
         let mut decision = FailoverDecision::RetrySameProvider;
         let mut should_record_circuit_failure = true;
 
-        if matched_rule_id.is_some() {
-            should_record_circuit_failure = false;
-            category = ErrorCategory::NonRetryableClientError;
-            decision = FailoverDecision::Abort;
-        } else if upstream_client_error_rules::should_abort_unmatched_client_error(
-            status,
-            matched_rule_id,
-        ) {
+        if matched_rule_id.is_some()
+            || upstream_client_error_rules::should_abort_unmatched_client_error(
+                status,
+                matched_rule_id,
+            )
+        {
             should_record_circuit_failure = false;
             category = ErrorCategory::NonRetryableClientError;
             decision = FailoverDecision::Abort;
