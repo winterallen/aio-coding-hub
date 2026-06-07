@@ -95,8 +95,9 @@ pub(crate) fn complete_current_flow<T>(
     result
 }
 
-/// Default User-Agent for OAuth HTTP requests (mirrors official Codex CLI).
-pub(crate) const DEFAULT_OAUTH_USER_AGENT: &str = "codex_cli_rs/0.76.0";
+/// Default User-Agent for OAuth HTTP requests (mirrors the supported Codex CLI).
+pub(crate) const DEFAULT_OAUTH_USER_AGENT: &str =
+    crate::gateway::upstream_identity::CODEX_CLI_USER_AGENT;
 /// Default request timeout in seconds for OAuth HTTP requests.
 pub(crate) const DEFAULT_OAUTH_TIMEOUT_SECS: u64 = 30;
 /// Default connect timeout in seconds for OAuth HTTP requests.

@@ -7,6 +7,7 @@ use super::provider_iterator::PreparedProvider;
 use super::*;
 use crate::gateway::proxy::abort_guard::RequestAbortGuard;
 use crate::gateway::proxy::request_context::RequestContext;
+use std::sync::{Arc, Mutex};
 
 /// Mutable per-provider state that persists across retries within one provider.
 pub(super) struct RetryLoopState {
@@ -121,15 +122,38 @@ where
     }
 
     // --- Clean body + send upstream ---
-    let cleaned_body = request_sanitizer::clean_body(input, prepared);
+    let clean_outcome = request_sanitizer::clean_body(input, prepared);
+    apply_body_sanitizer_outcome(
+        &mut headers,
+        ctx.special_settings,
+        prepared.provider_id,
+        &prepared.provider_name_base,
+        &clean_outcome,
+    );
+
+    emit_upstream_attempt_fingerprint(
+        ctx,
+        input,
+        prepared,
+        retry_index,
+        &url,
+        &headers,
+        &clean_outcome.body,
+    );
 
     let timing = AttemptTiming {
         attempt_started_ms,
         attempt_started: Instant::now(),
     };
 
-    let send_result =
-        send::send_upstream(ctx, input.req_method.clone(), url, headers, cleaned_body).await;
+    let send_result = send::send_upstream(
+        ctx,
+        input.req_method.clone(),
+        url,
+        headers,
+        clean_outcome.body,
+    )
+    .await;
 
     match send_result {
         send::SendResult::Ok(resp) => AttemptSendOutcome::Response(resp, timing),
@@ -149,6 +173,68 @@ fn try_build_url(prepared: &PreparedProvider) -> Result<reqwest::Url, String> {
         prepared.upstream_query.as_deref(),
     )
     .map_err(|e| e.to_string())
+}
+
+fn apply_body_sanitizer_outcome(
+    headers: &mut HeaderMap,
+    special_settings: &Arc<Mutex<Vec<serde_json::Value>>>,
+    provider_id: i64,
+    provider_name_base: &str,
+    clean_outcome: &request_sanitizer::CleanBodyOutcome,
+) {
+    if !clean_outcome.changed() {
+        return;
+    }
+    headers.remove(header::CONTENT_ENCODING);
+    response_fixer::push_special_setting(
+        special_settings,
+        serde_json::json!({
+            "type": "request_body_sanitizer",
+            "scope": "attempt",
+            "hit": true,
+            "providerId": provider_id,
+            "providerName": provider_name_base,
+            "reason": "claude_oauth_empty_text_blocks",
+            "removedEmptyTextBlocks": clean_outcome.removed_empty_text_blocks,
+        }),
+    );
+}
+
+fn emit_upstream_attempt_fingerprint<R: tauri::Runtime>(
+    ctx: CommonCtx<'_, R>,
+    input: &RequestContext<R>,
+    prepared: &PreparedProvider,
+    retry_index: u32,
+    url: &reqwest::Url,
+    headers: &HeaderMap,
+    body: &Bytes,
+) {
+    let fingerprint = crate::gateway::upstream_fingerprint::compute_upstream_request_fingerprint(
+        &input.req_method,
+        url,
+        headers,
+        body,
+    );
+    tracing::debug!(
+        trace_id = %input.trace_id,
+        cli_key = %input.cli_key,
+        provider_id = prepared.provider_id,
+        retry_index,
+        upstream_fingerprint_key = fingerprint.key,
+        upstream_fingerprint_debug = %fingerprint.debug,
+        "computed upstream attempt request fingerprint"
+    );
+    emit_gateway_debug_log_lazy(&ctx.state.app, || {
+        format!(
+            "[UPSTREAM_FP] trace_id={} provider={} (id={}) retry={} key={} debug={}",
+            input.trace_id,
+            prepared.provider_name_base,
+            prepared.provider_id,
+            retry_index,
+            fingerprint.key,
+            fingerprint.debug,
+        )
+    });
 }
 
 async fn handle_url_build_failure<R: tauri::Runtime>(
@@ -284,5 +370,74 @@ fn emit_started_event<R: tauri::Runtime>(
                 claude_model_mapping: prepared.claude_model_mapping.clone(),
             },
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::HeaderValue;
+    use serde_json::json;
+
+    #[test]
+    fn body_sanitizer_outcome_clears_content_encoding_and_records_setting() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
+        let special_settings = Arc::new(Mutex::new(Vec::new()));
+        let clean_outcome = request_sanitizer::CleanBodyOutcome {
+            body: Bytes::from_static(br#"{"messages":[]}"#),
+            removed_empty_text_blocks: 2,
+        };
+
+        apply_body_sanitizer_outcome(
+            &mut headers,
+            &special_settings,
+            42,
+            "Claude OAuth",
+            &clean_outcome,
+        );
+
+        assert!(headers.get(header::CONTENT_ENCODING).is_none());
+        let settings = special_settings.lock().unwrap();
+        assert_eq!(settings.len(), 1);
+        assert_eq!(
+            settings[0],
+            json!({
+                "type": "request_body_sanitizer",
+                "scope": "attempt",
+                "hit": true,
+                "providerId": 42,
+                "providerName": "Claude OAuth",
+                "reason": "claude_oauth_empty_text_blocks",
+                "removedEmptyTextBlocks": 2,
+            })
+        );
+    }
+
+    #[test]
+    fn body_sanitizer_outcome_is_noop_when_body_unchanged() {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
+        let special_settings = Arc::new(Mutex::new(Vec::new()));
+        let clean_outcome = request_sanitizer::CleanBodyOutcome {
+            body: Bytes::from_static(br#"{"messages":[]}"#),
+            removed_empty_text_blocks: 0,
+        };
+
+        apply_body_sanitizer_outcome(
+            &mut headers,
+            &special_settings,
+            42,
+            "Claude OAuth",
+            &clean_outcome,
+        );
+
+        assert_eq!(
+            headers
+                .get(header::CONTENT_ENCODING)
+                .and_then(|value| value.to_str().ok()),
+            Some("gzip")
+        );
+        assert!(special_settings.lock().unwrap().is_empty());
     }
 }
